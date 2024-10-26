@@ -1,16 +1,77 @@
 import customtkinter as ctk
 from tkinter import messagebox
+import mysql.connector
 
-def miFuncion():
-    idEmpleado = str(boxIdEmpleadoSearch.get())
-    if idEmpleado == "123":
-        messagebox.showinfo(message="Se editó correctamente", title="Alerta")
-    else:
-        messagebox.showinfo(message="Error, no se encontró el ID del empleado", title="Alerta")
+# Conectar a la base de datos
+def conectar_db():
+    try:
+        conexion = mysql.connector.connect(
+            host="localhost", 
+            user="root",  
+            password="", 
+            database="siegtrack"  
+        )
+        return conexion
+    except mysql.connector.Error as err:
+        messagebox.showerror("Error de conexión", str(err))
+        return None
 
-# Función que se ejecuta al presionar el botón de búsqueda
 def buscarEmpleado():
-    miFuncion()
+    idEmpleado = str(boxIdEmpleadoSearch.get())
+    conexion = conectar_db()
+    if conexion:
+        cursor = conexion.cursor()
+        cursor.execute("SELECT id, nombre, apellidopaterno, apellidomaterno, puesto, area FROM colaborador WHERE id = %s", (idEmpleado,))
+        resultado = cursor.fetchone()
+        
+        if resultado:
+            # la tabla 'colaborador' tiene las columnas: nombre, apellido_paterno, apellido_materno, puesto, area
+            idEmpleado, nombre, apellido_paterno, apellido_materno, puesto, area = resultado
+            
+            boxIdEmpleado.delete(0, 'end')
+            boxIdEmpleado.insert(0, idEmpleado)
+            boxNombre.delete(0, 'end')
+            boxNombre.insert(0, nombre)
+            boxApellidoPaterno.delete(0, 'end')
+            boxApellidoPaterno.insert(0, apellido_paterno)
+            boxApellidoMaterno.delete(0, 'end')
+            boxApellidoMaterno.insert(0, apellido_materno)
+            boxPuesto.delete(0, 'end')
+            boxPuesto.insert(0, puesto)
+            boxArea.delete(0, 'end')
+            boxArea.insert(0, area)
+            messagebox.showinfo(message="Empleado encontrado", title="Alerta")
+        else:
+            messagebox.showinfo(message="Error, no se encontró el ID del empleado", title="Alerta")
+        
+        cursor.close()
+        conexion.close()
+
+
+    
+def actualizarEmpleado():
+    idEmpleado = boxIdEmpleado.get()
+    nombre = boxNombre.get()
+    apellido_paterno = boxApellidoPaterno.get()
+    apellido_materno = boxApellidoMaterno.get()
+    puesto = boxPuesto.get()
+    area = boxArea.get()
+
+    conexion = conectar_db()
+    if conexion:
+        cursor = conexion.cursor()
+        try:
+            cursor.execute(
+                "UPDATE colaborador SET nombre = %s, apellidopaterno = %s, apellidomaterno = %s, puesto = %s, area = %s WHERE id = %s",
+                (nombre, apellido_paterno, apellido_materno, puesto, area, idEmpleado)
+            )
+            conexion.commit()
+            messagebox.showinfo("Actualización exitosa", "Los datos del empleado han sido actualizados.")
+        except mysql.connector.Error as err:
+            messagebox.showerror("Error al actualizar", str(err))
+        finally:
+            cursor.close()
+            conexion.close()
 
 
 
@@ -27,7 +88,7 @@ def on_focusout(event, entry, placeholder):
 
 def create_placeholder(entry, placeholder):
     entry.insert(0, placeholder)
-    entry.configure(fg_color="white", text_color="#d9d9d9")
+    entry.configure(fg_color="white", text_color="grey")
     entry.bind("<FocusIn>", lambda event: on_entry_click(event, entry, placeholder))
     entry.bind("<FocusOut>", lambda event: on_focusout(event, entry, placeholder))
 
@@ -61,7 +122,7 @@ frameBoxSearch = ctk.CTkFrame(ventana, fg_color="#d9d9d9")
 frameBoxSearch.pack(pady=15)
 
 # Crear caja de texto para buscar empleado (centrada)
-boxIdEmpleadoSearch = ctk.CTkEntry(frameBoxSearch, font=("Open Sans", 14), width=450, height=70, corner_radius=40, justify="center", border_width=2, border_color="white")
+boxIdEmpleadoSearch = ctk.CTkEntry(frameBoxSearch, font=("Open Sans", 25), width=450, height=70, corner_radius=40, justify="center", border_width=2, border_color="white")
 boxIdEmpleadoSearch.pack(side="left", padx=(0, 10))  # Solo el Entry está centrado dentro de este Frame
 create_placeholder(boxIdEmpleadoSearch, "")
 
@@ -79,10 +140,10 @@ boton_busqueda = ctk.CTkButton(frameLupa,
                                fg_color="#d9d9d9",  
                                hover_color="#e0e0e0", 
                                font=("Open Sans", 60, "bold"), 
-                               command=miFuncion)
+                               command=buscarEmpleado)
 boton_busqueda.pack()
 
-# Crear el resto de las cajas de texto como antes
+# boxes
 boxIdEmpleado = ctk.CTkEntry(ventana, font=("Open Sans", 25), width=450, height=70, corner_radius=40, justify="center", border_width=2, border_color="white")
 boxIdEmpleado.pack(pady=15)
 create_placeholder(boxIdEmpleado, "NO. EMPLEADO")
@@ -107,8 +168,7 @@ boxArea = ctk.CTkEntry(ventana, font=("Open Sans", 25), width=450, height=70, co
 boxArea.pack(pady=15)
 create_placeholder(boxArea, "ÁREA")
 
-# Botón con estilo y cambio de color en hover
-boton = ctk.CTkButton(ventana, 
+botonEditar = ctk.CTkButton(ventana, 
                       text="EDITAR", 
                       width=250, 
                       height=70, 
@@ -117,8 +177,8 @@ boton = ctk.CTkButton(ventana,
                       fg_color="#7d0100",  
                       hover_color="#a51e1d",  
                       font=("Open Sans", 30, "bold"), 
-                      command=buscarEmpleado)
-boton.pack(pady=20)
+                      command=actualizarEmpleado) 
+botonEditar.pack(pady=20)
 
 ventana.mainloop()
 
@@ -128,4 +188,4 @@ ventana.mainloop()
 
 
 
-#ambito, que es lo que s[i va a poder hacer]
+#nota:ambito, que es lo que si va a poder hacer]
